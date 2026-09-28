@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EnvShield Studio — Environment Variable Auditor & Sync</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header / Navbar -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">🛡️</div>
+        <div class="brand-text">
+          <h1>EnvShield <span class="badge version">v1.0.0</span></h1>
+          <p class="subtitle">Zero-Dependency Environment Variable Auditor & Visual Sync Studio</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <div class="health-gauge" id="healthGauge">
+          <span class="health-label">Security Score</span>
+          <span class="health-val" id="healthScore">--</span>
+        </div>
+        <button class="btn btn-secondary" id="btnRefresh" title="Reload status">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-primary" id="btnSyncAll">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Sync Missing Keys
+        </button>
+      </div>
+    </header>
+
+    <!-- Stat Metric Cards -->
+    <section class="stats-grid">
+      <div class="stat-card" data-status="all">
+        <span class="stat-title">Total Variables</span>
+        <span class="stat-value" id="statTotal">0</span>
+        <span class="stat-sub" id="statFilesInfo">.env vs .env.example</span>
+      </div>
+      <div class="stat-card stat-success" data-status="synced">
+        <span class="stat-title">Synced & Valid</span>
+        <span class="stat-value" id="statSynced">0</span>
+        <span class="stat-sub">Ready for production</span>
+      </div>
+      <div class="stat-card stat-danger" data-status="missing">
+        <span class="stat-title">Missing in .env</span>
+        <span class="stat-value" id="statMissing">0</span>
+        <span class="stat-sub">Risk of runtime crash</span>
+      </div>
+      <div class="stat-card stat-warning" data-status="empty">
+        <span class="stat-title">Empty / Placeholders</span>
+        <span class="stat-value" id="statWarnings">0</span>
+        <span class="stat-sub">Requires configuration</span>
+      </div>
+      <div class="stat-card stat-critical" data-status="security">
+        <span class="stat-title">Security Alerts</span>
+        <span class="stat-value" id="statSecurity">0</span>
+        <span class="stat-sub" id="gitStatusText">Checking git...</span>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <div class="tabs-bar">
+      <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="matrix">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+          Variable Matrix
+        </button>
+        <button class="tab-btn" data-tab="editor">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Dual Editor
+        </button>
+        <button class="tab-btn" data-tab="radar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Security Radar
+        </button>
+      </div>
+
+      <div class="tabs-actions" id="matrixActions">
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="searchInput" placeholder="Search variables...">
+        </div>
+        <select id="filterSelect" class="select-box">
+          <option value="all">All Variables</option>
+          <option value="missing">Missing Only</option>
+          <option value="issues">Issues & Warnings</option>
+          <option value="synced">Synced Only</option>
+          <option value="extra">Extra Only</option>
+        </select>
+        <button class="btn btn-ghost" id="btnToggleMask" title="Show or hide secret values">
+          <span id="maskIcon">👁️</span> <span id="maskText">Show Values</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: Matrix View -->
+    <div class="tab-content active" id="tab-matrix">
+      <div class="table-container">
+        <table class="env-table">
+          <thead>
+            <tr>
+              <th style="width: 24%">Variable Name</th>
+              <th style="width: 14%">Status</th>
+              <th style="width: 12%">Type</th>
+              <th style="width: 25%">Active Value (.env)</th>
+              <th style="width: 25%">Template Value (.env.example)</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTableBody">
+            <tr>
+              <td colspan="5" class="loading-cell">Loading environment variables...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: Dual Editor View -->
+    <div class="tab-content" id="tab-editor">
+      <div class="editor-grid">
+        <div class="editor-pane">
+          <div class="pane-header">
+            <div class="pane-title">
+              <span class="file-icon">📄</span>
+              <strong id="editorEnvTitle">.env</strong>
+              <span class="badge" id="envBadge">Active</span>
+            </div>
+            <div class="pane-actions">
+              <button class="btn btn-sm btn-primary" id="btnSaveEnv">Save .env</button>
+            </div>
+          </div>
+          <div class="editor-wrapper">
+            <textarea id="rawEnvEditor" spellcheck="false" placeholder="# Load your .env content here..."></textarea>
+          </div>
+        </div>
+
+        <div class="editor-pane">
+          <div class="pane-header">
+            <div class="pane-title">
+              <span class="file-icon">📋</span>
+              <strong id="editorExampleTitle">.env.example</strong>
+              <span class="badge badge-dim">Template</span>
+            </div>
+            <div class="pane-actions">
+              <button class="btn btn-sm btn-secondary" id="btnGenExample">Generate from .env</button>
+              <button class="btn btn-sm btn-primary" id="btnSaveExample">Save Example</button>
+            </div>
+          </div>
+          <div class="editor-wrapper">
+            <textarea id="rawExampleEditor" spellcheck="false" placeholder="# Load your .env.example content here..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Security Radar -->
+    <div class="tab-content" id="tab-radar">
+      <div class="radar-container">
+        <div class="radar-card">
+          <div class="radar-card-header">
+            <h3>🛡️ Git Repository Protection</h3>
+            <span class="badge" id="gitProtectionBadge">Checking...</span>
+          </div>
+          <p id="gitProtectionMessage" class="radar-card-desc">Verifying whether your sensitive .env files are excluded in .gitignore to prevent public leaks.</p>
+        </div>
+
+        <div class="radar-card">
+          <div class="radar-card-header">
+            <h3>🔒 File Permissions (POSIX chmod)</h3>
+            <span class="badge" id="permBadge">Checking...</span>
+          </div>
+          <p id="permMessage" class="radar-card-desc">Checking file permission bits to ensure non-root users cannot inspect sensitive secrets.</p>
+        </div>
+
+        <div class="radar-card full-width">
+          <div class="radar-card-header">
+            <h3>⚠️ Vulnerability & Secret Leak Findings</h3>
+            <span class="badge badge-dim" id="vulnCount">0 detected</span>
+          </div>
+          <div id="vulnerabilitiesList" class="vuln-list">
+            <!-- Dynamic findings -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>EnvShield &bull; Zero External Dependencies &bull; Running on Node.js</div>
+      <div class="footer-links">
+        <a href="https://github.com/mahdyarmonfared/env-shield" target="_blank" rel="noopener">GitHub Repository</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

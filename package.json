@@ -1,0 +1,38 @@
+{
+  "name": "env-shield",
+  "version": "1.0.0",
+  "description": "Zero-dependency environment variable validator, security auditor, and visual sync studio.",
+  "main": "src/core/index.js",
+  "bin": {
+    "envshield": "./bin/env-shield.js",
+    "env-shield": "./bin/env-shield.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node bin/env-shield.js ui",
+    "check": "node bin/env-shield.js check",
+    "audit": "node bin/env-shield.js audit",
+    "sync": "node bin/env-shield.js sync"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahdyarmonfared/env-shield.git"
+  },
+  "keywords": [
+    "env",
+    "environment-variables",
+    "dotenv",
+    "validator",
+    "security",
+    "secret-scanner",
+    "linter",
+    "sync",
+    "cli",
+    "developer-tools"
+  ],
+  "author": "Mahdyar Monfared",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
